@@ -12,6 +12,8 @@ from termcolor import colored
 import time
 import copy
 import itertools
+import tkinter as tk
+from tkinter import font
 
 """Auxiliary functions"""
 
@@ -131,6 +133,10 @@ class Sudoku:
         self.rows=np.zeros((9,9),dtype=bool)
         self.columns=np.zeros((9,9),dtype=bool)
         self.boxes=np.zeros((9,9),dtype=bool)
+        if indentation=='':
+          self.root = tk.Tk()
+          self.root.title("Game Board")
+          self.root.geometry("600x500+200+100")
       
         for i in range(9):
           for j in range(9):
@@ -154,7 +160,7 @@ class Sudoku:
               self.columns[j][num]=True
               self.boxes[getBox([i,j])][num]=True
         
-    def printer(self, message, printSudoku=True, i=-1, j=-1):
+    def printer_terminal(self, message, printSudoku=True, i=-1, j=-1):
         if self.PRINT_SUDOKUS:
             print(self.indentation+message)
             if printSudoku:
@@ -181,6 +187,115 @@ class Sudoku:
                 print(self.indentation, end='')
                 print(black + '-------------------------'+ black)
         
+    def printer(self, message, printSudoku=True, i=-1, j=-1):
+      if self.PRINT_SUDOKUS:
+          if printSudoku:
+              for widget in self.root.winfo_children():
+                  widget.destroy()
+              N = 9
+              cell_width = 40
+              cell_height = 40
+
+              canvas_width = (N + 1) * cell_width
+              canvas_height = (N + 1) * cell_height
+
+              main_frame = tk.Frame(self.root)
+              main_frame.pack()
+
+              canvas = tk.Canvas(main_frame, width=canvas_width, height=canvas_height, bg='white')
+              canvas.pack(side="left")
+
+              board_font = font.Font(family="Helvetica", size=12, weight="bold")
+
+              # Draw column numbers
+              for col in range(N):
+                  x = (col + 1) * cell_width + cell_width // 2
+                  y = cell_height // 2
+                  canvas.create_text(x, y, text=str(col + 1), font=board_font, fill='blue')
+
+              # Draw row numbers
+              for row in range(N):
+                  x = cell_width // 2
+                  y = (row + 1) * cell_height + cell_height // 2
+                  canvas.create_text(x, y, text=str(row + 1), font=board_font, fill='green')
+
+              for row in range(N):
+                  for col in range(N):
+                      x1 = (col + 1) * cell_width
+                      y1 = (row + 1) * cell_height
+                      x2 = x1 + cell_width
+                      y2 = y1 + cell_height
+
+                      cx = (x1 + x2) // 2
+                      cy = (y1 + y2) // 2
+
+                      canvas.create_rectangle(x1, y1, x2, y2, fill='white', outline='gray')
+
+                      if self.sudoku_grid_original[row][col] != '0':
+                          canvas.create_text(cx, cy, text=self.sudoku_grid_original[row][col], font=board_font, fill='black')
+                      elif i == row and j == col:
+                          canvas.create_text(cx, cy, text=self.sudoku_grid[row][col], font=board_font, fill='magenta')
+                      elif self.sudoku_grid[row][col] != '0':
+                          canvas.create_text(cx, cy, text=self.sudoku_grid[row][col], font=board_font, fill='blue')
+
+                      # Draw 3x3 box outline
+                      if row % 3 == 2 and col % 3 == 2:
+                          x3 = x1 - 2 * cell_width
+                          y3 = y1 - 2 * cell_height
+                          canvas.create_rectangle(x3, y3, x2, y2, outline='black')
+
+              # Right-side frame for legend and button
+              right_frame = tk.Frame(main_frame)
+              right_frame.pack(side="left", padx=20)
+
+              legend_cell_size = 10
+              legend_grid_size = 9 * legend_cell_size
+
+              legend_canvas = tk.Canvas(right_frame, width=legend_grid_size, height=legend_grid_size, bg='white')
+              legend_canvas.pack()
+
+              # Draw 9x9 grid
+              for i in range(10):
+                  width = 2 if i % 3 == 0 else 1
+                  # Vertical lines
+                  x = i * legend_cell_size
+                  legend_canvas.create_line(x, 0, x, legend_grid_size, fill="gray", width=width)
+                  # Horizontal lines
+                  y = i * legend_cell_size
+                  legend_canvas.create_line(0, y, legend_grid_size, y, fill="gray", width=width)
+
+              # Add 9 labels in 3x3 block positions
+              box_names = [str(i+1) for i in range(9)]
+              for idx, name in enumerate(box_names):
+                  row = idx // 3
+                  col = idx % 3
+                  # Calculate center of each 3x3 box
+                  x = (col * 3 + 1.5) * legend_cell_size
+                  y = (row * 3 + 1.5) * legend_cell_size
+                  legend_canvas.create_text(x, y, text=name, font=("Helvetica", 15, "bold"))
+
+
+              # Button below legend
+              def on_button_click():
+                  self.root.quit()
+
+              button = tk.Button(right_frame, text="Next step", command=on_button_click)
+              button.pack(pady=20)
+
+              # Explanation label
+              explanation_label = tk.Label(
+                  self.root,
+                  text=message,
+                  font=("Helvetica", 10),
+                  fg="darkgreen",
+                  wraplength=canvas_width - 20,
+                  justify="left"
+              )
+              explanation_label.pack(pady=10)
+
+              self.root.mainloop()
+
+                
     def is_complete(self):
         """Check if the sudoku grid is complete"""
         for row in self.sudoku_grid:
